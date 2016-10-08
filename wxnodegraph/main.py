@@ -3,162 +3,10 @@ import math
 import wx
 import json
 
-
-W = 2000
-H = 2000
-HIT_RADIUS = 5
-
-PLUG_MARGIN = 6
-PLUG_RADIUS = 4
-PLUG_HIT_RADIUS = 10
-PLUG_SPACING = 20
-PLUG_TYPE_IN = 0
-PLUG_TYPE_OUT = 1
-
-ROUND_CORNER_RADIUS = 8
-
-TITLE_INSET_X = 5
-TITLE_INSET_Y = 1
-
-
-WIRE_COLOUR = 'black'
-WIRE_THICKNESS = 2
-
-
-class Wire( object ):
-    
-    def __init__( self, pnt1, pnt2, dir_ ):
-        self.pnt1 = pnt1
-        self.pnt2 = pnt2
-        self._idx = wx.NewId()
-        self.dir = dir_
-
-        # HAXXOR
-        self.pen = wx.Pen( WIRE_COLOUR, WIRE_THICKNESS )
-
-    def Draw( self, dc ):
-
-        # HAXXOR for source / destination drawing direction.
-        sign = 1
-        if self.dir == PLUG_TYPE_IN:
-            sign = -1
-
-        pnts = []
-        pnts.append( self.pnt1 )
-        pnts.append( self.pnt1 + wx.Point( 10 * sign, 0 ) )
-        pnts.append( self.pnt2 - wx.Point( 10 * sign, 0 ) )
-        pnts.append( self.pnt2 )
-        dc.SetPen( self.pen )
-        dc.DrawSpline( pnts )
-        '''
-        # HAXXOR - New bezier curve.
-        newPnts = []
-        for point in bezier.bezier_curve_range( 40, pnts ):
-            newPnts.append( point )
-
-        #dc.DrawSpline( newPnts )
-        lastPnt = newPnts[0]
-        for pnt in newPnts:
-            dc.DrawLine( lastPnt[0], lastPnt[1], pnt[0], pnt[1]) 
-            lastPnt = pnt
-        '''
-
-    def GetRect( self ):
-        minX = min( self.pnt1[0], self.pnt2[0] )
-        minY = min( self.pnt1[1], self.pnt2[1] )
-        size = self.pnt2 - self.pnt1
-        rect = wx.Rect( minX - 10, minY, abs( size[0] ) + 20, abs( size[1] ) )
-        return rect.Inflate( self.pen.GetWidth(), self.pen.GetWidth() )
-        
-
-class Plug( object ):
-    
-    def __init__( self, pos, radius, type_, node ):
-        self.pos = wx.Point( pos[0], pos[1] )  # In node space
-        self.radius = radius
-        self.type = type_
-        self.node = node
-
-        self.wires = []
-
-    def Draw( self, dc ):
-        final = self.pos + self.node.pos
-        dc.SetPen( wx.Pen( 'grey',style=wx.TRANSPARENT ) )
-        dc.SetBrush( wx.Brush( 'black', wx.SOLID ) )
-        dc.DrawCircle( final.x, final.y, self.radius )
-
-    def HitTest( self, pos ):
-        pnt = pos - self.pos
-        dist = math.sqrt( math.pow( pnt.x, 2 ) + math.pow( pnt.y, 2 ) )
-        if math.fabs( dist ) < PLUG_HIT_RADIUS:
-            return True
-
-    def CanConnect( self ):
-        pass
-
-    def Disconnect( self ):
-        pass
-
-
-class Node( object ):
-
-    def __init__( self, label, pos, ins, outs, colour=None ):
-        self.label = label
-        self.pos = wx.Point( pos[0], pos[1] )
-
-        self._idx = wx.NewId()
-        self.size = (100, 100)
-        self.ins = ins
-        self.outs = outs
-        self.selected = False
-        self.drawn = False
-
-        self._colour = colour or 'white'
-
-        # HAXXOR
-        self.plugs = []
-        for i, in_ in enumerate( self.ins ):
-            plug = Plug( (PLUG_MARGIN, 40 + PLUG_SPACING * i), PLUG_RADIUS, PLUG_TYPE_IN, self )
-            self.plugs.append( plug )
-        for i, out in enumerate( self.outs ):
-            plug = Plug( (self.size[0] - PLUG_MARGIN - 1, 40 + PLUG_SPACING * i), PLUG_RADIUS, PLUG_TYPE_OUT, self )
-            self.plugs.append( plug )
-
-        self.wires = []
-
-    def Draw( self, dc ):
-        x, y = self.pos
-        w, h = self.size
-        dc.SetPen( wx.Pen( 'black', 1 ) )
-        dc.SetBrush( wx.Brush( self._colour, wx.SOLID ) )
-        dc.DrawRoundedRectangle( x, y, w, h, ROUND_CORNER_RADIUS )
-        #dc.SetFont( self.GetFont().SetWeight( wx.BOLD ) )
-
-        newFont = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
-        newFont.SetWeight(wx.BOLD)
-        dc.SetFont( newFont )
-
-        dc.DrawText( self.label, x + TITLE_INSET_X, y + TITLE_INSET_Y )
-
-        # Draw ins / outs.
-        for plug in self.plugs:
-            plug.Draw( dc )
-
-    def HitTest( self, pos ):
-        for plug in self.plugs:
-            if plug.HitTest( pos - self.pos ):
-                return plug
-
-    def UpdateRect( self, rect ):
-        self.pos = rect.GetPosition()
-        self.size = rect.GetSize()
-
-    def GetRect( self ):
-        return wx.Rect( self.pos[0], self.pos[1], self.size[0], self.size[1] )
-
-    def SetColour( self, col ):
-        self._colour = col
-
+from constants import *
+from wire import Wire
+from node import Node
+  
 
 class NodeGraph( wx.ScrolledWindow ):
     def __init__(self, parent, id, log, size = wx.DefaultSize):
@@ -195,11 +43,12 @@ class NodeGraph( wx.ScrolledWindow ):
         r.OffsetXY(-(xView*xDelta),-(yView*yDelta))
 
     def AppendItem( self, label, pos, ins, outs, colour=None ):
-        node = Node( label, pos, ins, outs, colour )
-        self.pdc.SetId( node._idx )
+        node = Node( label, colour, rect=wx.Rect( pos.x, pos.y, 100, 100 ), ins=ins, outs=outs )
+        nId = node.GetId()
+        self.pdc.SetId( nId )
         node.Draw( self.pdc )
-        self.pdc.SetIdBounds( node._idx, node.GetRect() )
-        self.nodes[node._idx] = node
+        self.pdc.SetIdBounds( nId, node.GetRect() )
+        self.nodes[nId] = node
         return node
 
     def OnLeftDown( self, evt ):
@@ -207,9 +56,9 @@ class NodeGraph( wx.ScrolledWindow ):
         winPnt = self.ConvertCoords( pnt )
         self.srcNode = self.HitTest( winPnt )
         if self.srcNode is not None:
-            self.srcPlug = self.srcNode.HitTest( winPnt )
+            self.srcPlug = self.srcNode.HitTest( winPnt.x, winPnt.y )
             if self.srcPlug is not None:
-                self.tmpWire = Wire( self.srcNode.pos + self.srcPlug.pos, pnt, self.srcPlug.type )
+                self.tmpWire = Wire( self.srcNode.GetRect().GetPosition() + self.srcPlug.pos, pnt, self.srcPlug.type )
         self.lastPnt = pnt
 
     def OnMotion( self, evt ):
@@ -220,19 +69,19 @@ class NodeGraph( wx.ScrolledWindow ):
         winPnt = self.ConvertCoords( pnt )
         if self.srcPlug is None:
             dPnt = pnt - self.lastPnt
-            r = self.pdc.GetIdBounds( self.srcNode._idx )
-            self.pdc.TranslateId( self.srcNode._idx, dPnt[0], dPnt[1] )
-            r2 = self.pdc.GetIdBounds( self.srcNode._idx )
+            r = self.pdc.GetIdBounds( self.srcNode.GetId() )
+            self.pdc.TranslateId( self.srcNode.GetId(), dPnt[0], dPnt[1] )
+            r2 = self.pdc.GetIdBounds( self.srcNode.GetId() )
             r = r.Union( r2 )
             self.OffsetRect( r )
             self.RefreshRect( r, False )
             self.lastPnt = pnt
-            self.srcNode.UpdateRect( r2 )
+            self.srcNode.SetRect( r2 )
 
             # Redraw wires
-            for wire in self.srcNode.wires:
-                pnt1 = wire.srcNode.pos + wire.srcPlug.pos
-                pnt2 = wire.dstNode.pos + wire.dstPlug.pos
+            for wire in self.srcNode.GetWires():
+                pnt1 = wire.srcNode.GetRect().GetPosition() + wire.srcPlug.pos
+                pnt2 = wire.dstNode.GetRect().GetPosition() + wire.dstPlug.pos
                 self.DrawWire( wire, pnt1, pnt2 )
 
         elif self.tmpWire is not None:
@@ -246,8 +95,8 @@ class NodeGraph( wx.ScrolledWindow ):
             winPnt = self.ConvertCoords( pnt )
             dstNode = self.HitTest( winPnt )
             if dstNode is not None:
-                dstPlug = dstNode.HitTest( winPnt )
-                if dstPlug is not None and self.srcPlug.type != dstPlug.type and self.srcNode._idx != dstNode._idx:
+                dstPlug = dstNode.HitTest( winPnt.x, winPnt.y )
+                if dstPlug is not None and self.srcPlug.type != dstPlug.type and self.srcNode.GetId() != dstNode.GetId():
                     self.ConnectNodes( self.srcNode, self.srcPlug, dstNode, dstPlug )
 
         # Erase the temp wire.
@@ -298,15 +147,15 @@ class NodeGraph( wx.ScrolledWindow ):
         self.pdc.DrawToDCClipped( dc, r )
 
     def ConnectNodes( self, srcNode, srcPlug, dstNode, dstPlug ):
-        wire = Wire( srcNode.pos + srcPlug.pos, dstNode.pos + dstPlug.pos, srcPlug.type )
+        wire = Wire( srcNode.GetRect().GetPosition() + srcPlug.pos, dstNode.GetRect().GetPosition() + dstPlug.pos, srcPlug.type )
         wire.srcNode = srcNode
         wire.dstNode = dstNode
         wire.srcPlug = srcPlug
         wire.dstPlug = dstPlug
-        srcNode.wires.append( wire )
-        dstNode.wires.append( wire )
+        srcNode._wires.append( wire )
+        dstNode._wires.append( wire )
 
-        for wire in srcNode.wires:
+        for wire in srcNode._wires:
             self.pdc.SetId( wire._idx )
             wire.Draw( self.pdc )
             self.pdc.SetIdBounds( wire._idx, wire.GetRect() )

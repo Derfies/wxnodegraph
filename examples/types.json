@@ -1,88 +1,86 @@
 {
-  "Math":{
-    "Add":{
-      "properties":{
-        "name":"Add",
-        "color":"#d49a60"
-      },
-      "ins":{
-        "A":{
-          "type":"Number"
-        },
-        "B":{
-          "type":"Number"
-        }
-      },
-      "outs":{
-        "out":{
-          "type":"Number",
-          "value":1000
-        }
-      },
-      "run":"function() {this.outs.out.value = this.ins.A.value + this.ins.B.value;return true;}"
+  "Math.Add":{
+    "properties":{
+      "name":"Add",
+      "color":"#d49a60"
     },
-    "Subtract":{
-      "properties":{
-        "name":"Subtract",
-        "color":"#d49a60"
+    "ins":{
+      "A":{
+        "type":"Number"
       },
-      "ins":{
-        "A":{
-          "type":"Number"
-        },
-        "B":{
-          "type":"Number"
-        }
-      },
-      "outs":{
-        "out":{
-          "type":"Number",
-          "value":1000
-        }
-      },
-      "run":"function() {this.outs.out.value = this.ins.A.value - this.ins.B.value;return true;}"
+      "B":{
+        "type":"Number"
+      }
     },
-    "Multiply":{
-      "properties":{
-        "name":"Multiply",
-        "color":"#d49a60"
-      },
-      "ins":{
-        "A":{
-          "type":"Number"
-        },
-        "B":{
-          "type":"Number"
-        }
-      },
-      "outs":{
-        "out":{
-          "type":"Number",
-          "value":1000
-        }
-      },
-      "run":"function() {this.outs.out.value = this.ins.A.value * this.ins.B.value;return true;}"
+    "outs":{
+      "out":{
+        "type":"Number",
+        "value":1000
+      }
     },
-    "Divide":{
-      "properties":{
-        "name":"Divide",
-        "color":"#d49a60"
+    "run":"function() {this.outs.out.value = this.ins.A.value + this.ins.B.value;return true;}"
+  },
+  "Math.Subtract":{
+    "properties":{
+      "name":"Subtract",
+      "color":"#d49a60"
+    },
+    "ins":{
+      "A":{
+        "type":"Number"
       },
-      "ins":{
-        "A":{
-          "type":"Number"
-        },
-        "B":{
-          "type":"Number"
-        }
+      "B":{
+        "type":"Number"
+      }
+    },
+    "outs":{
+      "out":{
+        "type":"Number",
+        "value":1000
+      }
+    },
+    "run":"function() {this.outs.out.value = this.ins.A.value - this.ins.B.value;return true;}"
+  },
+  "Math.Multiply":{
+    "properties":{
+      "name":"Multiply",
+      "color":"#d49a60"
+    },
+    "ins":{
+      "A":{
+        "type":"Number"
       },
-      "outs":{
-        "out":{
-          "type":"Number",
-          "value":1000
-        }
+      "B":{
+        "type":"Number"
+      }
+    },
+    "outs":{
+      "out":{
+        "type":"Number",
+        "value":1000
+      }
+    },
+    "run":"function() {this.outs.out.value = this.ins.A.value * this.ins.B.value;return true;}"
+  },
+  "Math.Divide":{
+    "properties":{
+      "name":"Divide",
+      "color":"#d49a60"
+    },
+    "ins":{
+      "A":{
+        "type":"Number"
       },
-      "run":"function() {this.outs.out.value = this.ins.A.value / this.ins.B.value;return true;}"
-    }
+      "B":{
+        "type":"Number"
+      }
+    },
+    "outs":{
+      "out":{
+        "type":"Number",
+        "value":1000
+      }
+    },
+    "run":"function() {this.outs.out.value = this.ins.A.value / this.ins.B.value;return true;}"
   }
 }
