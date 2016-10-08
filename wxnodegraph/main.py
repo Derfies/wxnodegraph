@@ -1,8 +1,7 @@
 import math
 
 import wx
-
-#import bezier
+import json
 
 
 W = 2000
@@ -28,19 +27,26 @@ WIRE_THICKNESS = 2
 
 class Wire( object ):
     
-    def __init__( self, pnt1, pnt2 ):
+    def __init__( self, pnt1, pnt2, dir_ ):
         self.pnt1 = pnt1
         self.pnt2 = pnt2
         self._idx = wx.NewId()
+        self.dir = dir_
 
         # HAXXOR
         self.pen = wx.Pen( WIRE_COLOUR, WIRE_THICKNESS )
 
     def Draw( self, dc ):
+
+        # HAXXOR for source / destination drawing direction.
+        sign = 1
+        if self.dir == PLUG_TYPE_IN:
+            sign = -1
+
         pnts = []
         pnts.append( self.pnt1 )
-        pnts.append( self.pnt1 + wx.Point( 10, 0 ) )
-        pnts.append( self.pnt2 - wx.Point( 10, 0 ) )
+        pnts.append( self.pnt1 + wx.Point( 10 * sign, 0 ) )
+        pnts.append( self.pnt2 - wx.Point( 10 * sign, 0 ) )
         pnts.append( self.pnt2 )
         dc.SetPen( self.pen )
         dc.DrawSpline( pnts )
@@ -96,7 +102,7 @@ class Plug( object ):
 
 class Node( object ):
 
-    def __init__( self, label, pos, ins, outs ):
+    def __init__( self, label, pos, ins, outs, colour=None ):
         self.label = label
         self.pos = wx.Point( pos[0], pos[1] )
 
@@ -106,6 +112,8 @@ class Node( object ):
         self.outs = outs
         self.selected = False
         self.drawn = False
+
+        self._colour = colour or 'white'
 
         # HAXXOR
         self.plugs = []
@@ -122,7 +130,7 @@ class Node( object ):
         x, y = self.pos
         w, h = self.size
         dc.SetPen( wx.Pen( 'black', 1 ) )
-        dc.SetBrush( wx.Brush( 'white', wx.SOLID ) )
+        dc.SetBrush( wx.Brush( self._colour, wx.SOLID ) )
         dc.DrawRoundedRectangle( x, y, w, h, ROUND_CORNER_RADIUS )
         #dc.SetFont( self.GetFont().SetWeight( wx.BOLD ) )
 
@@ -147,6 +155,9 @@ class Node( object ):
 
     def GetRect( self ):
         return wx.Rect( self.pos[0], self.pos[1], self.size[0], self.size[1] )
+
+    def SetColour( self, col ):
+        self._colour = col
 
 
 class NodeGraph( wx.ScrolledWindow ):
@@ -183,8 +194,8 @@ class NodeGraph( wx.ScrolledWindow ):
         xDelta, yDelta = self.GetScrollPixelsPerUnit()
         r.OffsetXY(-(xView*xDelta),-(yView*yDelta))
 
-    def AddNode( self, label, pos, ins, outs ):
-        node = Node( label, pos, ins, outs )
+    def AppendItem( self, label, pos, ins, outs, colour=None ):
+        node = Node( label, pos, ins, outs, colour )
         self.pdc.SetId( node._idx )
         node.Draw( self.pdc )
         self.pdc.SetIdBounds( node._idx, node.GetRect() )
@@ -198,7 +209,7 @@ class NodeGraph( wx.ScrolledWindow ):
         if self.srcNode is not None:
             self.srcPlug = self.srcNode.HitTest( winPnt )
             if self.srcPlug is not None:
-                self.tmpWire = Wire( self.srcNode.pos + self.srcPlug.pos, pnt )
+                self.tmpWire = Wire( self.srcNode.pos + self.srcPlug.pos, pnt, self.srcPlug.type )
         self.lastPnt = pnt
 
     def OnMotion( self, evt ):
@@ -236,7 +247,7 @@ class NodeGraph( wx.ScrolledWindow ):
             dstNode = self.HitTest( winPnt )
             if dstNode is not None:
                 dstPlug = dstNode.HitTest( winPnt )
-                if dstPlug is not None:
+                if dstPlug is not None and self.srcPlug.type != dstPlug.type and self.srcNode._idx != dstNode._idx:
                     self.ConnectNodes( self.srcNode, self.srcPlug, dstNode, dstPlug )
 
         # Erase the temp wire.
@@ -287,7 +298,7 @@ class NodeGraph( wx.ScrolledWindow ):
         self.pdc.DrawToDCClipped( dc, r )
 
     def ConnectNodes( self, srcNode, srcPlug, dstNode, dstPlug ):
-        wire = Wire( srcNode.pos + srcPlug.pos, dstNode.pos + dstPlug.pos )
+        wire = Wire( srcNode.pos + srcPlug.pos, dstNode.pos + dstPlug.pos, srcPlug.type )
         wire.srcNode = srcNode
         wire.dstNode = dstNode
         wire.srcPlug = srcPlug
@@ -317,25 +328,15 @@ class NodeGraph( wx.ScrolledWindow ):
         self.pdc.SetIdBounds( wire._idx, wire.GetRect() )
         self.RefreshRect( rect, False )
 
-
-class MainFrame( wx.Frame ):
-
-    def __init__( self, *args, **kwargs ):
-        wx.Frame.__init__( self, *args, **kwargs )
-
-        pnl = wx.Panel( self, wx.ID_ANY, size=(200,30) )
-        ng = NodeGraph( pnl, wx.ID_ANY, None )
-        ng.AddNode( '1', (66, 66), [], ['a'] )
-        ng.AddNode( '2', (66, 200), [], ['a'] )
-        ng.AddNode( 'Add', (200, 80), ['a', 'b'], [] )
-        sz = wx.BoxSizer( wx.VERTICAL )
-        sz.Add( ng, 1, wx.EXPAND )
-        pnl.SetSizerAndFit( sz )
-
-
-if __name__ == '__main__':
-    app = wx.App( redirect=False )
-    top = MainFrame( None, title='foo', pos=(0, 0), size=(500, 600) )
-    top.Show()
-    app.SetTopWindow( top )
-    app.MainLoop()
+    def Load( self, filePath ):
+        with open( filePath, 'r' ) as f:
+            data = json.load( f )
+            for nodeData in data:
+                props = nodeData['properties']
+                node = self.AppendItem( 
+                    props['name'], 
+                    wx.Point( props['x'], props['y'] ),
+                    nodeData['ins'],
+                    nodeData['outs'],
+                    props['color']
+                )
