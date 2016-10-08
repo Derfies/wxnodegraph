@@ -42,8 +42,8 @@ class NodeGraph( wx.ScrolledWindow ):
         xDelta, yDelta = self.GetScrollPixelsPerUnit()
         r.OffsetXY(-(xView*xDelta),-(yView*yDelta))
 
-    def AppendItem( self, label, pos, ins, outs, colour=None ):
-        node = Node( label, colour, rect=wx.Rect( pos.x, pos.y, 100, 100 ), ins=ins, outs=outs )
+    def AppendNode( self, label, pos, ins, outs, colour=None ):
+        node = Node( label, colour, rect=wx.Rect( pos.x, pos.y, 150, 100 ), ins=ins, outs=outs )
         nId = node.GetId()
         self.pdc.SetId( nId )
         node.Draw( self.pdc )
@@ -155,6 +155,8 @@ class NodeGraph( wx.ScrolledWindow ):
         srcNode._wires.append( wire )
         dstNode._wires.append( wire )
 
+        srcPlug.Connect( dstPlug )
+
         for wire in srcNode._wires:
             self.pdc.SetId( wire._idx )
             wire.Draw( self.pdc )
@@ -182,10 +184,13 @@ class NodeGraph( wx.ScrolledWindow ):
             data = json.load( f )
             for nodeData in data:
                 props = nodeData['properties']
-                node = self.AppendItem( 
+                node = self.AppendNode( 
                     props['name'], 
                     wx.Point( props['x'], props['y'] ),
-                    nodeData['ins'],
-                    nodeData['outs'],
+                    nodeData['ins'].keys(),
+                    nodeData['outs'].keys(),
                     props['color']
                 )
+
+    def GetNodePlug( self, node, plug ):
+        return node.GetPlug( plug )

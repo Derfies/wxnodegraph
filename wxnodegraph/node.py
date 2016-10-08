@@ -21,11 +21,13 @@ class Node( object ):
 
          # HAXXOR
         x, y, w, h = self._rect.Get()
-        for i, in_ in enumerate( ins ):
-            plug = Plug( (PLUG_MARGIN, 40 + PLUG_SPACING * i), PLUG_RADIUS, PLUG_TYPE_IN, self )
-            self._plugs.append( plug )
-        for i, out in enumerate( outs ):
-            plug = Plug( (w - PLUG_MARGIN - 1, 40 + PLUG_SPACING * i), PLUG_RADIUS, PLUG_TYPE_OUT, self )
+        for i, plugName in enumerate( ins + outs ):
+            plugType = PLUG_TYPE_IN
+            x = PLUG_MARGIN
+            if plugName in outs:
+                x = w - x
+                plugType = PLUG_TYPE_OUT
+            plug = Plug( plugName, (x, 40 + PLUG_SPACING * i), PLUG_RADIUS, plugType, self )
             self._plugs.append( plug )
     
     def GetId( self ):
@@ -89,7 +91,7 @@ class Node( object ):
         dc.DrawRoundedRectangle( x, y, w, h, ROUND_CORNER_RADIUS )
 
         newFont = wx.SystemSettings_GetFont(wx.SYS_DEFAULT_GUI_FONT)
-        newFont.SetWeight(wx.BOLD)
+        newFont.SetWeight( wx.BOLD )
         dc.SetFont( newFont )
 
         dc.DrawText( self._text, x + TITLE_INSET_X, y + TITLE_INSET_Y )
@@ -97,3 +99,8 @@ class Node( object ):
         # Draw ins / outs.
         for plug in self._plugs:
             plug.Draw( dc )
+
+    def GetPlug( self, plugName ):
+        for plug in self._plugs:
+            if plug.GetText() == plugName:
+                return plug
