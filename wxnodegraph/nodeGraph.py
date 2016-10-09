@@ -43,7 +43,7 @@ class NodeGraph( wx.ScrolledWindow ):
         r.OffsetXY(-(xView*xDelta),-(yView*yDelta))
 
     def AppendNode( self, label, pos, ins, outs, colour=None ):
-        node = Node( label, colour, rect=wx.Rect( pos.x, pos.y, 150, 100 ), ins=ins, outs=outs )
+        node = Node( self, label, colour, rect=wx.Rect( pos.x, pos.y, 150, 100 ), ins=ins, outs=outs )
         nId = node.GetId()
         self.pdc.SetId( nId )
         node.Draw( self.pdc )
@@ -58,7 +58,8 @@ class NodeGraph( wx.ScrolledWindow ):
         if self.srcNode is not None:
             self.srcPlug = self.srcNode.HitTest( winPnt.x, winPnt.y )
             if self.srcPlug is not None:
-                self.tmpWire = Wire( self.srcNode.GetRect().GetPosition() + self.srcPlug.pos, pnt, self.srcPlug.type )
+                self.srcPlug.Disconnect()
+                self.tmpWire = Wire( self.srcNode.GetRect().GetPosition() + self.srcPlug.GetPosition(), pnt, self.srcPlug.GetType() )
         self.lastPnt = pnt
 
     def OnMotion( self, evt ):
@@ -79,10 +80,11 @@ class NodeGraph( wx.ScrolledWindow ):
             self.srcNode.SetRect( r2 )
 
             # Redraw wires
-            for wire in self.srcNode.GetWires():
-                pnt1 = wire.srcNode.GetRect().GetPosition() + wire.srcPlug.pos
-                pnt2 = wire.dstNode.GetRect().GetPosition() + wire.dstPlug.pos
-                self.DrawWire( wire, pnt1, pnt2 )
+            for plug in self.srcNode.GetPlugs():
+                for wire in plug.GetWires():
+                    pnt1 = wire.srcNode.GetRect().GetPosition() + wire.srcPlug.GetPosition()
+                    pnt2 = wire.dstNode.GetRect().GetPosition() + wire.dstPlug.GetPosition()
+                    self.DrawWire( wire, pnt1, pnt2 )
 
         elif self.tmpWire is not None:
             self.DrawWire( self.tmpWire, pnt2=winPnt )
@@ -96,13 +98,13 @@ class NodeGraph( wx.ScrolledWindow ):
             dstNode = self.HitTest( winPnt )
             if dstNode is not None:
                 dstPlug = dstNode.HitTest( winPnt.x, winPnt.y )
-                if dstPlug is not None and self.srcPlug.type != dstPlug.type and self.srcNode.GetId() != dstNode.GetId():
-                    self.ConnectNodes( self.srcNode, self.srcPlug, dstNode, dstPlug )
+                if dstPlug is not None and self.srcPlug.GetType() != dstPlug.GetType() and self.srcNode.GetId() != dstNode.GetId():
+                    self.srcPlug.Connect( dstPlug )
 
         # Erase the temp wire.
         if self.tmpWire is not None:
-            rect = self.pdc.GetIdBounds( self.tmpWire._idx )
-            self.pdc.RemoveId( self.tmpWire._idx ) 
+            rect = self.pdc.GetIdBounds( self.tmpWire.GetId() )
+            self.pdc.RemoveId( self.tmpWire.GetId() ) 
             self.OffsetRect( rect )
             self.RefreshRect( rect, False )
 
@@ -146,23 +148,6 @@ class NodeGraph( wx.ScrolledWindow ):
         # Draw to the dc using the calculated clipping rect.
         self.pdc.DrawToDCClipped( dc, r )
 
-    def ConnectNodes( self, srcNode, srcPlug, dstNode, dstPlug ):
-        wire = Wire( srcNode.GetRect().GetPosition() + srcPlug.pos, dstNode.GetRect().GetPosition() + dstPlug.pos, srcPlug.type )
-        wire.srcNode = srcNode
-        wire.dstNode = dstNode
-        wire.srcPlug = srcPlug
-        wire.dstPlug = dstPlug
-        srcNode._wires.append( wire )
-        dstNode._wires.append( wire )
-
-        srcPlug.Connect( dstPlug )
-
-        for wire in srcNode._wires:
-            self.pdc.SetId( wire._idx )
-            wire.Draw( self.pdc )
-            self.pdc.SetIdBounds( wire._idx, wire.GetRect() )
-            self.RefreshRect( wire.GetRect(), False )
-
     def DrawWire( self, wire, pnt1=None, pnt2=None ):
         rect1 = wire.GetRect()
         if pnt1 is not None:
@@ -173,10 +158,8 @@ class NodeGraph( wx.ScrolledWindow ):
         rect = rect1.Union( rect2 )
         self.OffsetRect( rect )
 
-        self.pdc.ClearId( wire._idx )
-        self.pdc.SetId( wire._idx )
+        self.pdc.ClearId( wire.GetId() )
         wire.Draw( self.pdc )
-        self.pdc.SetIdBounds( wire._idx, wire.GetRect() )
         self.RefreshRect( rect, False )
 
     def Load( self, filePath ):

@@ -6,13 +6,13 @@ from constants import *
 
 class Node( object ):
     
-    def __init__( self, text='', colour='white', data=None, rect=wx.ID_ANY, id=wx.ID_ANY, ins=None, outs=None ):
+    def __init__( self, parent, text='', colour='white', data=None, rect=wx.ID_ANY, id=wx.ID_ANY, ins=None, outs=None ):
+        self._parent = parent
         self._text = text
         self._colour = colour
         self._data = data
         self._rect = rect#wx.Rect()
         self._plugs = []
-        self._wires = []
 
         if id == wx.ID_ANY:
             self._id = wx.NewId()
@@ -75,8 +75,16 @@ class Node( object ):
     def IsEnabled( self ):
         return self._enabled
 
-    def GetWires( self ):
-        return self._wires
+    def GetPlugs( self ):
+        return self._plugs
+
+    def FindPlug( self, plugName ):
+        for plug in self._plugs:
+            if plug.GetText() == plugName:
+                return plug
+
+    def GetParent( self ):
+        return self._parent
 
     def HitTest( self, x, y ):
         for plug in self._plugs:
@@ -85,6 +93,8 @@ class Node( object ):
 
     def Draw( self, dc ):
         x, y, w, h = self._rect.Get()
+
+        dc.SetId( self._id )
 
         dc.SetPen( wx.Pen( 'black', 1 ) )
         dc.SetBrush( wx.Brush( self._colour, wx.SOLID ) )
@@ -100,7 +110,4 @@ class Node( object ):
         for plug in self._plugs:
             plug.Draw( dc )
 
-    def GetPlug( self, plugName ):
-        for plug in self._plugs:
-            if plug.GetText() == plugName:
-                return plug
+        dc.SetIdBounds( self._id, self._rect )

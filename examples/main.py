@@ -1,5 +1,5 @@
 import sys
-sys.path.append( '../wxnodegraph' )
+sys.path.append( '..' )
 
 import wx
 
@@ -17,11 +17,14 @@ class MainFrame( wx.Frame ):
         sz.Add( ng, 1, wx.EXPAND )
         pnl.SetSizerAndFit( sz )
         ng.Load( 'math.json' )
+        #n1 = ng.AppendNode( 'foo', wx.Point(0,0), ['a'], ['b'])
+        #n2 = ng.AppendNode( 'bar', wx.Point(200,0), ['c'], ['d'])
+        #n1.FindPlug( 'b' ).Connect( n2.FindPlug( 'c' ) )
 
 
 if __name__ == '__main__':
     app = wx.App( redirect=False )
-    top = MainFrame( None, title='foo', pos=(0, 0), size=(800, 700) )
+    top = MainFrame( None, title='foo', pos=(0, 0), size=(400, 400) )
     top.Show()
     app.SetTopWindow( top )
     app.MainLoop()

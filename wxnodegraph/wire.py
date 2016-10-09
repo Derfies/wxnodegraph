@@ -8,13 +8,20 @@ class Wire( object ):
     def __init__( self, pnt1, pnt2, dir_ ):
         self.pnt1 = pnt1
         self.pnt2 = pnt2
-        self._idx = wx.NewId()
+        self._id = wx.NewId()
         self.dir = dir_
 
         # HAXXOR
         self.pen = wx.Pen( WIRE_COLOUR, WIRE_THICKNESS )
 
+    def GetId( self ):
+        return self._id
+
+    def SetId( self, id_ ):
+        self._id = id_
+
     def Draw( self, dc ):
+        dc.SetId( self._id )
 
         # HAXXOR for source / destination drawing direction.
         sign = 1
@@ -28,6 +35,8 @@ class Wire( object ):
         pnts.append( self.pnt2 )
         dc.SetPen( self.pen )
         dc.DrawSpline( pnts )
+        
+        dc.SetIdBounds( self._id, self.GetRect() )
 
     def GetRect( self ):
         minX = min( self.pnt1[0], self.pnt2[0] )
